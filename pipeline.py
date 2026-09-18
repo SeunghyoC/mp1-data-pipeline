@@ -49,6 +49,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--format",
+        choices=["csv", "json"],
         default="csv",
         help="Output format: csv or json"
     )
@@ -60,11 +61,6 @@ def parse_arguments():
     )
 
     args = parser.parse_args()
-
-    if args.format not in ["csv", "json"]:
-        print(f"Invalid format: '{args.format}'")
-        sys.exit(1)
-
     return args
 
 
