@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from data_loaders import load_data
+from data_processor import process_data, create_cleaning_report
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def setup_logging(verbose=False):
 
     logging.basicConfig(
         level=level,
-        format="%(asctime)s %(levelname)-8s %(message)s",
+        format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
         datefmt="%H:%M:%S"
     )
 
@@ -44,16 +45,15 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--output", "-o",
+        "--config",
         required=True,
-        help="Path to the output file"
+        help="Path to a YAML configuration file"
     )
 
     parser.add_argument(
-        "--format",
-        choices=["csv", "json"],
-        default="csv",
-        help="Output format: csv or json"
+        "--output", "-o",
+        required=True,
+        help="Path to the output file"
     )
 
     parser.add_argument(
@@ -81,15 +81,33 @@ def main():
     args = parse_arguments()
     setup_logging(args.verbose)
 
-    logger.debug(f"Arguments parsed: input={args.input}, output={args.output}, format={args.format}")
+    logger.debug(f"Arguments parsed: input={args.input}, config={args.config}, output={args.output}")
 
     if not validate_input(args.input):
         sys.exit(1)
 
+    if not validate_input(args.config):
+        sys.exit(1)
+
     try:
         data = load_data(args.input)
+        config = load_data(args.config)
     except ValueError:
         sys.exit(1)
+
+    df_before = data.copy()
+
+    try:
+        df_after = process_data(data, config)
+    except ValueError:
+        sys.exit(1)
+
+    report = create_cleaning_report(df_before, df_after)
+    print(report)
+    logger.info(f"Processing complete: {len(df_before)} → {len(df_after)} rows")
+
+    df_after.to_csv(args.output, index=False)
+    logger.info(f"Saved cleaned data to {args.output}")
 
 
 if __name__ == "__main__":
